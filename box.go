@@ -56,10 +56,11 @@ func NewBox(path string) Box {
 // Box represent a folder on a disk you want to
 // have access to in the built Go binary.
 type Box struct {
-	Path        string
-	callingDir  string
-	data        map[string][]byte
-	directories map[string]bool
+	Path         string
+	callingDir   string
+	data         map[string][]byte
+	directories  map[string]bool
+	SkipDecompress bool
 }
 
 // AddString converts t to a byteslice and delegates to AddBytes to add to b.data
@@ -129,15 +130,26 @@ func (b Box) Has(name string) bool {
 }
 
 func (b Box) decompress(bb []byte) []byte {
-	reader, err := gzip.NewReader(bytes.NewReader(bb))
-	if err != nil {
-		return bb
+	if !b.SkipDecompress {
+		reader, err := gzip.NewReader(bytes.NewReader(bb))
+		if err != nil {
+			return bb
+		}
+
+		data, err := ioutil.ReadAll(reader)
+		if err != nil {
+			return bb
+		}
+		return data
+	} else {
+		reader := bytes.NewReader(bb)
+
+		data, err := ioutil.ReadAll(reader)
+		if err != nil {
+			return bb
+		}
+		return data
 	}
-	data, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return bb
-	}
-	return data
 }
 
 func (b Box) find(name string) (File, error) {
